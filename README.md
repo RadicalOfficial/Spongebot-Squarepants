@@ -1,8 +1,8 @@
 # The OFFICIAL Bot by speedwaysingapore
-This is a bot called Spongebob Squarepants or Pycord Bot.
+This is a bot called Spongebob Squarepants.
 
 ## Current Bot Version:
-```2.0.2```
+```3.0.0```
 ### Credits:
 | Code  | Description |
 | ---------- | ------------- |
