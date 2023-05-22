@@ -12,7 +12,7 @@ Invite the bot [here!](https://discord.com/api/oauth2/authorize?client_id=110842
 | PyCord | Official Code setups.  |
 
 ### Having Issues?
-Contact me anywhere:
-Scratch - Knightbot63
-Replit - Knightbot63
+Contact me anywhere:<br>
+Scratch - Knightbot63<br>
+Replit - Knightbot63<br>
 Or on here!
