@@ -1,9 +1,5 @@
 # The OFFICIAL Bot by speedwaysingapore
-This is a bot called Spongebob Squarepants.
-
-## Current Bot Version:
-```3.0.0```
-Invite the bot [here!](https://discord.com/api/oauth2/authorize?client_id=1108424322869117018&permissions=30232208735479&scope=bot)
+This is a bot called Spongebob Squarepants. It currently has lots of commands. Do /help to see them all.
 
 ### Credits:
 | Code  | Description |
