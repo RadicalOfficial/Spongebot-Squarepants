@@ -10,7 +10,7 @@ import random
 from flask import Flask, jsonify
 from threading import Thread
 import logging
-import aiohttp # Fixed to prevent "Blocking"
+import aiohttp
 import json
 import datetime
 
@@ -140,7 +140,7 @@ async def help(ctx):
   await paginator.respond(ctx.interaction)
 
 
-@bot.command(description="Checks if ScratchDB is Up or Not.")
+# @bot.command(description="Checks if ScratchDB is Up or Not.")
 async def check_scratchdb(ctx):
   async with aiohttp.ClientSession() as session:
     async with session.get("https://scratchdb.lefty.one") as r:
