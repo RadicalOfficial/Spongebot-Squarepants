@@ -2,14 +2,17 @@ import os
 import discord
 from discord import option
 from discord.ext.pages import Paginator, Page, PaginatorButton
-from discord.ext import commands
+from discord.ext import commands, tasks
+from discord.ext.commands import has_permissions, CheckFailure
 import requests
 import time as t
 import random
-from flask import Flask
+from flask import Flask, jsonify
 from threading import Thread
 import logging
-import aiohttp
+import aiohttp # Fixed to prevent "Blocking"
+import json
+import datetime
 
 print("Pycord Version", discord.__version__)
 
@@ -20,11 +23,14 @@ app = Flask('')
 
 @app.route('/')
 def main():
-  return "Your Bot Is Ready"
+  return jsonify({"status": "up"})
 
+@app.route('/lottery/reset')
+def rng():
+  return jsonify({"Hourly time until reset:": datetime.datetime.now().hour})
 
 def run():
-  app.run(host="0.0.0.0", port=8000)
+  app.run(host="0.0.0.0", port=8000, threaded=True)
 
 
 server = Thread(target=run)
@@ -32,7 +38,34 @@ server.start()
 
 print("Loading... ")
 
-bot = discord.Bot()
+def checkIfMidnight():
+    return datetime.time(hour=0, minute=0, second=0, microsecond=0) == 0
+
+def change_lottery_numbers():
+  f = open('lottery.json')
+  data = json.load(f)["rng"]
+
+  findString = str(data)
+  rpl = random.randint(0,99), random.randint(0,99), random.randint(0,99), random.randint(0,99)
+  res = str(rpl)[1:-1]
+  print(res)
+  with open('lottery.json', 'r') as f:
+    data = f.read()
+    data = data.replace(findString, res)
+  
+  with open('lottery.json', 'w') as f:
+    f.write(data)
+  f.close()
+  print("JSON Data replaced")
+
+midnight = checkIfMidnight()
+print(midnight)
+
+'''
+Bot Code
+'''
+activity = discord.Game(name="/help")
+bot = discord.Bot(activity=activity, status=discord.Status.online)
 
 
 class Messenger(discord.ui.Modal):
@@ -49,19 +82,6 @@ class Messenger(discord.ui.Modal):
                           color=discord.Color.random())
     embed.add_field(name="Message:", value=self.children[0].value)
     await interaction.response.send_message(embeds=[embed])
-
-class MyView(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
-    @discord.ui.button(label="Click to request being admin.", style=discord.ButtonStyle.primary)
-    async def button_callback(self, button, interaction):
-      member = interaction.user
-      content = f"Hello {member}!\nDo you want to be an admin of the Server of k3? You're in luck! Once your application gets accepted, you will be admin for 2 months.\nAfter that time goes, you can't re-apply again or else it'll be rejected by the owner and the other moderators.\nRemember, just because you have admin powers doesn't mean you can ban everyone, if we do see things that break the #rules of the server, you will be revoked from admin.\n\nPlease note, this will be implemented in `4.0.0` so stay tuned!\n\nSecret fun fact, you can direct message anyone on the server you like with the bot invited by doing /dm"
-      await member.send(content)
-      
-
-@bot.event
-async def on_ready():
-  print(f"{bot.user} is ready and online!")
-
 
 @bot.command(description="Checks if the bot is online")
 async def ping(ctx):
@@ -91,14 +111,14 @@ async def help(ctx):
       discord.Embed(
         title="Advanced Commands:",
         description=
-        "/check_scratchdb - Checks if ScratchDB is up or not\n/vibe_check - Sees your vibe.\n**(NEW)** /write - Gets responses from Google Bard, An AI\n**(NEW)** /weather - Displays the weather for any city"
+        "/check_scratchdb - Checks if ScratchDB is up or not\n/vibe_check - Sees your vibe.\n/write - Gets responses from Google Bard, An AI\n/weather - Displays the weather for any city\n**(NEW)**/dice - Rolls the dice"
       )
     ], ),
     Page(embeds=[
       discord.Embed(
         title="Questions? Feedback?",
         description=
-        "Direct Message @k3!\n\n**Other:**\nCurernt Version: ```3.0.0```\n*Credits:*\nPyCord for code\nEverything else by @k3 (creator of this bot)\nGitHub: https://github.com/speedwaysingapore/Spongebot-Squarepants\nReplit: https://replit.com/@Knightbot63/Spongebot\nLine Count (python code): 152"
+        "Direct Message @k3!\n\n**Other:**\nCurernt Version: ```3.1.0```\n*Credits:*\nPyCord for code\nEverything else by @k3 (creator of this bot)\nGitHub: https://github.com/speedwaysingapore/Spongebot-Squarepants\nReplit: https://replit.com/@Knightbot63/Spongebot\nLine Count (python code): 300+"
       )
     ], ),
   ]
@@ -122,9 +142,15 @@ async def help(ctx):
 
 @bot.command(description="Checks if ScratchDB is Up or Not.")
 async def check_scratchdb(ctx):
-  data = requests.get(
-    "https://scratchdb-checker.knightbot63.repl.co").json()['Status']
-  await ctx.respond("ScratchDB is Currently: " + data, ephemeral=True)
+  async with aiohttp.ClientSession() as session:
+    async with session.get("https://scratchdb.lefty.one") as r:
+      status = await r.status_code
+      print(status)
+      if status == 200:
+        data = "Online"
+      else:
+        data = "Offline"
+      await ctx.respond("ScratchDB is Currently: " + data, ephemeral=True)
 
 
 @bot.command(description="Fun game to check if you are human")
@@ -138,7 +164,8 @@ async def vibe_check(ctx):
     await msg.edit(content="You're not good.")
 
 
-'''@bot.command(description="Bot Updates or other announcements")
+'''
+@bot.command(description="Bot Updates or other announcements")
 async def announcement(ctx, title: discord.Option(str),
                        message: discord.Option(str),
                        announcement: discord.Option(str),
@@ -153,7 +180,8 @@ async def announcement(ctx, title: discord.Option(str),
     )
     await ctx.respond(embed=embed)
   else:
-    await ctx.respond("What do you think you are doing?", ephemeral=True)'''
+    await ctx.respond("What do you think you are doing?", ephemeral=True)
+'''
 
 
 @bot.command(description="Gets weather via https://weatherapi.com")
@@ -164,11 +192,11 @@ async def weather(ctx, city: discord.Option(str)):
   async with aiohttp.ClientSession() as session:
     async with session.get(url, params=params) as res:
       data = await res.json()
-      print('\n\n', data, "\n\n")
+      #print('\n\n', data, "\n\n")
       if 'error' in data:
         await ctx.respond(
           f"Error: `{data['error']['message']}` | Error code: `{data['error']['code']}`"
-        )  #respond > send
+        )
       else:
         location = data["location"]["name"]
         temp_c = data["current"]["temp_c"]
@@ -189,45 +217,95 @@ async def weather(ctx, city: discord.Option(str)):
         await ctx.respond(embed=embed)
 
 
-@bot.command(description="[BETA] Uses Google Bard")
+@bot.command(description="Uses Google Bard to fetch responses")
 @option("request", str, description="Enter text that Bard will generate")
-async def prompt(ctx, request: discord.Option(str)):
-  await ctx.respond("Thinking...", ephemeral=True)
-  data = requests.get("https://text-generator-api.knightbot63.repl.co/api/" +
-                      request).json()
+@option("member", str, description="This is optional, you don't have to enter anything.")
+@commands.cooldown(1,60)
+async def prompt(ctx, request: discord.Option(str), member: discord.Member=None):
+  await ctx.respond("Successfully sent the prompt!", ephemeral=True)
+  member = ctx.author
+  await ctx.respond("*Spongebot Squarepants is thinking...*", ephemeral=True)
+  async with aiohttp.ClientSession() as session:
+    async with session.get("https://text-generator-api.knightbot63.repl.co/api/" + request) as r:
+      if r.status == 200:
+        data = r.json()
   response = data['content']
   request = data['request']
-  send = f"**{request}**\n\n`{response}`"
-  await ctx.send(send)
-
-
-@bot.command(description="Calling certain discord people certain things")
-async def roles(ctx):
-  if str(ctx.author) in ["k3#8331", "Wolfieboy09#4819"]: # why not. wanna see
-    await ctx.send(
-      "**List of Nitrox's Chat custom roles (by me):\n*Custom:*\nHoid - Gorilla\nHypnos - Demon, witch etc.\nEpic - Perverted\nNitrox - Ant\n*Dirty minded People:*\n List on the padlet.\n*Good People:*\nPooky - Why not?\nEileen - Lowest on the padlet dirty minded people.\n*What about k3?:*\nI don't really have a custom role, maybe nerd since I'm better at coding."
-    )
-  else:
-    await ctx.respond("You can't do that command!", ephemeral=True)
-'''
-@bot.command(description='Request to be an admin of the server of k3')
-@commands.cooldown(1, 120, commands.BucketType.user)
-async def curate(ctx):
-  await ctx.respond("Please click the button to get a direct message from the bot on what to do.", view=MyView())
-'''
+  send = f"**{request}**\n\n```{response}```"
+  try:
+    await member.send(send)
+  except Exception:
+    raise f"The bot can't send the request because {Exception}"
+    
 @bot.command(description='Get a random cat image')
-async def cat(ctx):
-  data = requests.get("https://cataas.com/cat?html=false&json=true").json()["url"]
-  await ctx.send("https://cataas.com" + data)
+@commands.cooldown(1,300)
+async def cat_image(ctx):
+  async with aiohttp.ClientSession() as session:
+    async with session.get('https://cataas.com/cat?html=false&json=true') as r:
+      data = r.json()["url"]
+      await ctx.send("https://cataas.com" + data)
+      await ctx.respond("Success!", ephemeral=True)
+
+
+@bot.command(description='Range of Random Numbers')
+@commands.cooldown(1,10)
+@option("first", int, description="Your first number")
+@option("second", int, description="Your second number")
+async def dice(ctx, first: discord.Option(int), second: discord.Option(int)):
+  print("Ranging")
+  print("Yes")
+  rang = random.randint(first, second)
+  await ctx.respond("Successfully sent the prompt!", ephemeral=True)
+  await ctx.respond(f"{ctx.author.mention}\nFirst: {first}\nSecond: {second}\n Result: {rang}")
+
+@bot.command(description="Fetches latest comment")
+@option("channel", str, description="Enter the channel ID for the server the bot is in to get the latest comment.")
+async def fetch_latest(ctx, channel: discord.Option(str)):
+  try:
+    channel = bot.get_channel(int(channel))
+    message = await channel.fetch_message(
+    channel.last_message_id)
+    await ctx.respond(f'Latest message in: #{channel.name} has been sent by @{message.author.name}\n**Message:**\n' + message.content)
+  except:
+    await ctx.respond("Failed to fetch.", ephemeral=True)
+
+
+@bot.command(description="Makes a voting system")
+@option("desc", str, description="Enter a description for your vote!")
+@has_permissions(administrator=True)
+async def create_vote(ctx, desc: discord.Option(str)):
+  try:
+    embed = discord.Embed(
+        title="Vote:",
+        description=desc
+    )
+    embed.set_footer(text="Upvote and Downvote about your expressions!")
+    msg = await ctx.respond(embed=embed)
+    message = await msg.original_response()
+    await message.add_reaction("👍")
+    await message.add_reaction("👎")
+  except Exception as e:
+    await ctx.respond("Some errors had occurred. Do not worry, this is in an alpha state.", ephemeral=True)
+
+
+'''
+@tasks.loop(time=midnight)
+async def send():
+  channel = bot.get_channel(os.environ['CHANNEL'])
+  change_lottery_numbers()
+  await channel.send('Rerolling the Loterry for today!')
+'''
 
 @bot.event
-async def on_application_command_error(ctx, error):
-    if isinstance(error, commands.CommandOnCooldown):
-      await ctx.send('This command is on a %.2fs cooldown' % error.retry_after)
+async def on_application_command_error(ctx, error):  
+  if isinstance(error, commands.CommandOnCooldown):
+      await ctx.send('Sorry, you must wait %.2fs until you can do this command.' % error.retry_after)
 
-@bot.command(description="Close the form")
-async def close(ctx):
-  await ctx.send("Command is being built.", ephemeral=True)
+
+@bot.event
+async def on_ready():
+  # send.start()
+  print(f"{bot.user} is ready and online!")
 
 
 bot.run(os.environ['token'])
