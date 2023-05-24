@@ -13,8 +13,9 @@ import logging
 import aiohttp
 import json
 import datetime
+import inflect
 
-print("Pycord Version", discord.__version__)
+p = inflect.engine()
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -36,8 +37,6 @@ def run():
 server = Thread(target=run)
 server.start()
 
-print("Loading... ")
-
 def checkIfMidnight():
     return datetime.time(hour=0, minute=0, second=0, microsecond=0) == 0
 
@@ -57,7 +56,9 @@ def change_lottery_numbers():
     f.write(data)
   f.close()
   print("JSON Data replaced")
-
+def like_the_bot():
+  if random.randint(1,10) == 4:
+    print("☕Like the bot?")
 midnight = checkIfMidnight()
 print(midnight)
 
@@ -83,6 +84,67 @@ class Messenger(discord.ui.Modal):
     embed.add_field(name="Message:", value=self.children[0].value)
     await interaction.response.send_message(embeds=[embed])
 
+
+class BardButton(discord.ui.View):
+  def __init__(self):
+    super().__init__(timeout=None)
+
+    supportServerButton = discord.ui.Button(label='Support Server', style=discord.ButtonStyle.gray, url='https://discord.com')
+    self.add_item(supportServerButton)
+
+  
+  @discord.ui.button(label="See the API", style=discord.ButtonStyle.url)
+  async def button_callback(self, button, interaction):
+    await interaction.response.send_message("You clicked the button!")
+
+choices = ["Rock", "Paper", "Scissors"]
+
+class game(discord.ui.View):
+    @discord.ui.select(placeholder = "Choose an action!", min_values = 1, max_values = 1, options = [
+            discord.SelectOption(
+                label="🪨 Rock",
+                description="Choose if you want rock"
+            ),
+            discord.SelectOption(
+                label="🧻 Paper",
+                description="Choose if you want to use paper"
+            ),
+            discord.SelectOption(
+                label="✂ Scissors",
+                description="Choose if you want Scissors"
+            )
+        ]
+    )
+    async def select_callback(self, select, interaction):
+      user_choice = select.values[0]
+      answer = random.choice(choices)
+      if user_choice == "🪨 Rock": # 1
+        if answer == "Rock":
+          await interaction.response.send_message(f"# You tied to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+        elif answer == "Scissors":
+          await interaction.response.send_message(f"# You lost to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+        elif answer == "Paper":
+          await interaction.response.send_message(f"# You won to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+      
+      
+      elif user_choice == "🧻 Paper": # 2
+        if answer == "Rock":
+          await interaction.response.send_message(f"# You Won to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+        elif answer == "Scissors":
+          await interaction.response.send_message(f"# You lost to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+        elif answer == "Paper":
+          await interaction.response.send_message(f"# You tied to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+      
+      
+      elif user_choice == "✂ Scissors": # 3
+        if answer == "Rock":
+          await interaction.response.send_message(f"# You lost to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+        elif answer == "Scissors":
+          await interaction.response.send_message(f"# You tied to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+        elif answer == "Paper":
+          await interaction.response.send_message(f"# You won to {answer}!\n\n ### Ready to challenge again? Do /play again.")
+      
+
 @bot.command(description="Checks if the bot is online")
 async def ping(ctx):
   await ctx.respond("🏓Pong!")
@@ -90,6 +152,7 @@ async def ping(ctx):
 
 @bot.command(description="Repeats after you")
 async def messenger(ctx: discord.ApplicationContext):
+  like_the_bot()
   modal = Messenger(title="Please enter text.")
   await ctx.send_modal(modal)
   await ctx.respond(
@@ -99,19 +162,20 @@ async def messenger(ctx: discord.ApplicationContext):
 
 @bot.command(description="Get Help via the tables.")
 async def help(ctx):
+  like_the_bot()
   my_pages = [
     Page(embeds=[
       discord.Embed(
         title="Basic Commands:",
         description=
-        "/help - Direct Messages for help\n/messenger - Sends a private message in the area.\n/ping - Checks if the bot is alive\n"
+        "/help - Direct Messages for help\n/messenger - Sends a private message in the area.\n/ping - Checks if the bot is alive\n/game - Plays rock paper scissors."
       ),
     ], ),
     Page(embeds=[
       discord.Embed(
         title="Advanced Commands:",
         description=
-        "/check_scratchdb - Checks if ScratchDB is up or not\n/vibe_check - Sees your vibe.\n/write - Gets responses from Google Bard, An AI\n/weather - Displays the weather for any city\n**(NEW)**/dice - Rolls the dice"
+        "/vibe_check - Sees your vibe.\n/write - Gets responses from Google Bard, An AI\n/weather - Displays the weather for any city\n/dice - Rolls the dice\n/vote - Creates a vote."
       )
     ], ),
     Page(embeds=[
@@ -142,6 +206,7 @@ async def help(ctx):
 
 # @bot.command(description="Checks if ScratchDB is Up or Not.")
 async def check_scratchdb(ctx):
+  like_the_bot()
   async with aiohttp.ClientSession() as session:
     async with session.get("https://scratchdb.lefty.one") as r:
       status = await r.status_code
@@ -155,6 +220,7 @@ async def check_scratchdb(ctx):
 
 @bot.command(description="Fun game to check if you are human")
 async def vibe_check(ctx):
+  like_the_bot()
   await ctx.respond("**Loading your content!**", ephemeral=True)
   msg = await ctx.send("Checking your vibe...")
   t.sleep(random.randint(2, 5))
@@ -187,6 +253,7 @@ async def announcement(ctx, title: discord.Option(str),
 @bot.command(description="Gets weather via https://weatherapi.com")
 @option("city", str, description="Enter a city. Please use valid ones")
 async def weather(ctx, city: discord.Option(str)):
+  like_the_bot()
   url = "http://api.weatherapi.com/v1/current.json"
   params = {"key": os.environ["Weather ID"], "q": city}
   async with aiohttp.ClientSession() as session:
@@ -220,26 +287,26 @@ async def weather(ctx, city: discord.Option(str)):
 @bot.command(description="Uses Google Bard to fetch responses")
 @option("request", str, description="Enter text that Bard will generate")
 @option("member", str, description="This is optional, you don't have to enter anything.")
-@commands.cooldown(1,60)
+@commands.cooldown(1,5)
 async def prompt(ctx, request: discord.Option(str), member: discord.Member=None):
-  await ctx.respond("Successfully sent the prompt!", ephemeral=True)
+  like_the_bot()
   member = ctx.author
   await ctx.respond("*Spongebot Squarepants is thinking...*", ephemeral=True)
   async with aiohttp.ClientSession() as session:
     async with session.get("https://text-generator-api.knightbot63.repl.co/api/" + request) as r:
-      if r.status == 200:
-        data = r.json()
-  response = data['content']
-  request = data['request']
-  send = f"**{request}**\n\n```{response}```"
+      data = await r.json()
+      response = data['content']
+      request = data['request']
+      send = f"**{request}**\n\n```{response}```"
   try:
-    await member.send(send)
+    await member.respond(send)
   except Exception:
     raise f"The bot can't send the request because {Exception}"
     
 @bot.command(description='Get a random cat image')
 @commands.cooldown(1,300)
 async def cat_image(ctx):
+  like_the_bot()
   async with aiohttp.ClientSession() as session:
     async with session.get('https://cataas.com/cat?html=false&json=true') as r:
       data = r.json()["url"]
@@ -252,6 +319,7 @@ async def cat_image(ctx):
 @option("first", int, description="Your first number")
 @option("second", int, description="Your second number")
 async def dice(ctx, first: discord.Option(int), second: discord.Option(int)):
+  like_the_bot()
   print("Ranging")
   print("Yes")
   rang = random.randint(first, second)
@@ -261,6 +329,7 @@ async def dice(ctx, first: discord.Option(int), second: discord.Option(int)):
 @bot.command(description="Fetches latest comment")
 @option("channel", str, description="Enter the channel ID for the server the bot is in to get the latest comment.")
 async def fetch_latest(ctx, channel: discord.Option(str)):
+  like_the_bot()
   try:
     channel = bot.get_channel(int(channel))
     message = await channel.fetch_message(
@@ -272,20 +341,28 @@ async def fetch_latest(ctx, channel: discord.Option(str)):
 
 @bot.command(description="Makes a voting system")
 @option("desc", str, description="Enter a description for your vote!")
-@has_permissions(administrator=True)
 async def create_vote(ctx, desc: discord.Option(str)):
+  like_the_bot()
   try:
     embed = discord.Embed(
         title="Vote:",
         description=desc
     )
     embed.set_footer(text="Upvote and Downvote about your expressions!")
+    embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
     msg = await ctx.respond(embed=embed)
     message = await msg.original_response()
     await message.add_reaction("👍")
     await message.add_reaction("👎")
   except Exception as e:
     await ctx.respond("Some errors had occurred. Do not worry, this is in an alpha state.", ephemeral=True)
+
+
+@bot.command(description="Plays a basic game of rick, paper, scissors")
+async def play(ctx):
+  like_the_bot()
+  await ctx.respond(f"Challenge accepted {ctx.author.mention}!", ephemeral=True)
+  await ctx.send("Up to a battle of rock paper scissors from the bot?", view=game())
 
 
 '''
@@ -300,7 +377,6 @@ async def send():
 async def on_application_command_error(ctx, error):  
   if isinstance(error, commands.CommandOnCooldown):
       await ctx.send('Sorry, you must wait %.2fs until you can do this command.' % error.retry_after)
-
 
 @bot.event
 async def on_ready():
